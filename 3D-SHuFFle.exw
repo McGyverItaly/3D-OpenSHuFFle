@@ -1,0 +1,1179 @@
+-- ============================ 3d-SHuFFle.exw ============================
+-- Read DOCUMENTATION.TXT, or start the program and go to <?>, <Info>
+
+-- SHuFFle is a program that converts a ".shuf" object descriptor into an OpenSCAD ".scad" file.
+-- Copyright (C) 2020 Claudio Emiliozzi, Italy
+--+------------------------------------------------------------------------------------------------------------------------------+
+--¦This program (and correlated file formats) is free software: you can redistribute it and/or modify it under the terms of the  ¦
+--¦GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) ¦
+--¦any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the ¦
+--¦implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.¦
+--¦You should have received a copy of the GNU General Public License along with this program.  If not, see                       ¦
+--¦<https://www.gnu.org/licenses/>.                                                                                              ¦
+--+------------------------------------------------------------------------------------------------------------------------------+
+
+--TAB SIZE = 4
+
+--+-----------------------------------+	   Y=1
+--¦		   GUI_SELECTION_AREA		  ¦
+--¦									  ¦
+--+-----------------------------------+	   GUI_INPUT_END_Y
+--¦									  ¦
+--¦		   GUI_OPERATING_AREA		  ¦
+--¦									  ¦
+--¦									  ¦
+--¦									  ¦
+--¦									  ¦
+--¦									  ¦
+--¦									  ¦
+--+-----------------------------------+
+
+
+
+--with trace
+without warning
+-- GUI constants:
+constant BUTW = 50, BUTH = 26 -- BUTW: BUTton Width
+constant GUI_INPUT_END_Y = 4*BUTH, LIST1_W = 34
+
+-- Smart Support Array constants:
+constant XSTEP = 20, YSTEP = 20, MAX_M = 20, MAX_N = 20
+constant N_DOUBLINGS = 3	--how much times the number of section points are doubled
+
+include utils.e
+include misc.e
+include file.e
+include get.e
+include graphics.e
+include Win32lib.ew
+
+
+global atom position, file, exist_rotfile
+global sequence fileName, input_file, rot_file, content, hull_data, rot_data, section, stl_out, trans, rot, OShull
+object temp
+
+fileName="3d-SHuFFle"
+input_file = ""
+hull_data = ""
+rot_file = ""
+
+
+-- David Cuny's Win32 Euphoria wrapper
+--==========================================================================--
+--							object declarations							--
+--==========================================================================--
+		constant theWin=  create(Window, fileName & "                   -----==<SHELL-HULL FILE FORMAT to OpenSCAD Objects CoNvErTeR>==-----", 0, 0, 0, 880, 560,  0)
+		setWindowBackColor(theWin, rgb(194,164,228))
+		setIcon(theWin, IDI_APPLICATION)
+
+	  global constant BMake_shell = create( PushButton,	  		-- the class
+							  "SHuFFle to Empty Polyhedron",						-- the caption
+							  theWin,						-- the parent
+							  BUTW*5, GUI_INPUT_END_Y,				-- x and y position
+							  3*BUTW, BUTH,					-- height and width
+							  0 )							-- no special flags
+
+	  global constant BMake_shell_text = create( LText,	  	-- the class
+							  " -> selected output *_EP.scad file",	-- the caption
+							  theWin,						-- the parent
+							  BUTW*8, GUI_INPUT_END_Y+8,				-- x and y position
+							  10*BUTW, BUTH,				-- height and width
+							  0 )							-- no special flags
+
+	  global constant BSave = create( PushButton,	  		-- the class
+							  "Save Absolute SHuFFle",			-- the caption
+							  theWin,						-- the parent
+							  BUTW*5, GUI_INPUT_END_Y+2*BUTH,				-- x and y position
+							  3*BUTW, BUTH,					-- height and width
+							  0 )							-- no special flags
+
+	  global constant BSave_text = create( LText,	  		-- the class
+							  " -> selected output *_ABS.shuf file",	-- the caption
+							  theWin,						-- the parent
+							  BUTW*8, GUI_INPUT_END_Y+2*BUTH+8,				-- x and y position
+							  10*BUTW, BUTH,				-- height and width
+							  0 )							-- no special flags
+
+	  global constant BMake_solid = create( PushButton,	-- the class
+							  "SHuFFle to Solid Hull",		-- the caption
+							  theWin,						-- the parent
+							  BUTW*5, GUI_INPUT_END_Y+4*BUTH,				-- x and y position
+							  3*BUTW, BUTH,					-- height and width
+							  0 )							-- no special flags
+
+	  global constant BMake_solid_text = create( LText,	  	-- the class
+							  " -> selected output *.scad file (only for convex boundary shuf slices)",	-- the caption
+							  theWin,						-- the parent
+							  BUTW*8, GUI_INPUT_END_Y+4*BUTH+8,				-- x and y position
+							  10*BUTW, BUTH,				-- height and width
+							  0 )							-- no special flags
+
+--		global constant BPrSection = create( PushButton,	-- the class
+--							  "List hull_data as Eu.object",-- the caption
+--							  theWin,						-- the parent
+--							  BUTW*5, GUI_INPUT_END_Y+6*BUTH,				-- x and y position
+--							  3*BUTW, BUTH,					-- height and width
+--							  0 )							-- no special flags
+
+--		global constant BPrSection_text = create( LText,	-- the class
+--							  " -> standard output",			-- the caption
+--							  theWin,						-- the parent
+--							  BUTW*8, GUI_INPUT_END_Y+6*BUTH+8,				-- x and y position
+--							  3*BUTW, BUTH,					-- height and width
+--							  0 )							-- no special flags
+
+		global constant BCreateSupportArray = create( PushButton,-- the class
+							  "SHuFFle to Support Array",		-- the caption
+							  theWin,						-- the parent
+							  BUTW*5,GUI_INPUT_END_Y+8*BUTH,				-- x and y position
+							  3*BUTW, BUTH,					-- height and width
+							  0 )							-- no special flags
+
+		global constant BCreateSupportArray_text = create( LText,-- the class
+							  " -> selected output *_SA.scad file === EXPERIMENTAL === empty() polyhedron generated",		-- the caption
+							  theWin,						-- the parent
+							  BUTW*8, GUI_INPUT_END_Y+8*BUTH+8,			-- x and y position
+							  9*BUTW, BUTH,					-- height and width
+							  0 )							-- no special flags
+
+		global constant BRotFile = create( ToggleButton,-- the class
+							  "RotFile Off",		-- the caption
+							  theWin,						-- the parent
+							  BUTW*6.5,GUI_INPUT_END_Y+10*BUTH,				-- x and y position
+							  1.5*BUTW, BUTH,					-- height and width
+							  0 )							-- no special flags
+
+		global constant BRotFile_text = create( LText,-- the class
+							  " use/don't use Rotation File",		-- the caption
+							  theWin,						-- the parent
+							  BUTW*8, GUI_INPUT_END_Y+10*BUTH+8,			-- x and y position
+							  9*BUTW, BUTH,					-- height and width
+							  0 )							-- no special flags
+
+
+
+		global constant Hint_text = create( LText,-- the class
+							  "Welcome in \"" & fileName & "\", a code from Claudio Emiliozzi, Italy, written in Euphoria 3.1.1",		-- the caption
+							  theWin,						-- the parent
+							  BUTW*5, GUI_INPUT_END_Y+13*BUTH+8,			-- x and y position
+							  11*BUTW, BUTH,					-- height and width
+							  0 )							-- no special flags
+
+		global constant List1 = create( List, "", theWin, 10, GUI_INPUT_END_Y, 230, 390, 0 )
+
+
+
+
+
+
+
+--=====================================================================================
+
+	  global constant BINPUT = create( PushButton,	  		-- the class
+							  "Input file",					-- the caption
+							  theWin,						-- the parent
+							  BUTW*0, BUTH*0,				-- x and y position
+							  2*BUTW, BUTH,					-- height and width
+							  0 )							-- no special flags
+
+	  global constant INPUTtext = create( LText,	  		-- the class
+							  "",							-- the caption
+							  theWin,						-- the parent
+							  BUTW*2, BUTH*0+8,				-- x and y position
+							  14*BUTW, BUTH,				-- height and width
+							  0 )							-- no special flags
+
+	  global constant OUTPUTLabel = create( CText,	  		-- the class
+							  "Output file",				-- the caption
+							  theWin,						-- the parent
+							  BUTW*0, BUTH*1+8,				-- x and y position
+							  2*BUTW, BUTH,					-- height and width
+							  0 )							-- no special flags
+
+	  global constant OUTPUTtext = create( EditText,  		-- the class
+							  "",							-- the caption
+							  theWin,						-- the parent
+							  BUTW*2, BUTH*1,				-- x and y position
+							  14*BUTW, BUTH,				-- height and width
+							  0 )							-- no special flags
+
+	  global constant BrotINPUT = create( PushButton,	  		-- the class
+							  "Rot. Input file",					-- the caption
+							  theWin,						-- the parent
+							  BUTW*0, BUTH*2,				-- x and y position
+							  2*BUTW, BUTH,					-- height and width
+							  0 )							-- no special flags
+
+	  global constant rotINPUTtext = create( LText,	  		-- the class
+							  "",							-- the caption
+							  theWin,						-- the parent
+							  BUTW*2, BUTH*2+8,				-- x and y position
+							  14*BUTW, BUTH,				-- height and width
+							  0 )							-- no special flags
+--=====================================================================================
+-- Menu
+constant	MInfo	  	=	create( Menu, 	"&?",theWin, 0,0,0,0,0 ),
+			MAbout   		=	create( MenuItem, 	"About", MInfo, 0,0,0,0,0 ),
+			MInfo_   		=	create( MenuItem, 	"Info", MInfo, 0,0,0,0,0 )
+--			MNew_Prj   	=	create( MenuItem, 	"&New Prj", MFile, 0,0,0,0,0 ),
+--			MOpen_Prj	=  	create( MenuItem, 	"&Open Prj", MFile, 0,0,0,0,0 ),
+--			MSave_As	=  	create( MenuItem, 	"&Save Prj as", MFile, 0,0,0,0,0 ),
+--			Test 		=	create( MenuItem, 	"Test", MFile, 0,0,0,0,0 )
+--=====================================================================================
+
+-- translation and rotation: rotation will be executed first, then rotation, with no regard of their position in the input ".shuf" file
+
+global procedure trans_input()	-- move shell/hull by the "a" vector
+	sequence arg, a
+
+	a = {0,0,0}
+	addItem( List1, "Translate by vector:")
+	puts(1, "\n\n")
+
+	for z = 1 to 3 do
+		arg = get_argument_now(position, content)
+--			puts(1, "_" & arg[1])
+		temp = value(arg[1])
+		if temp[1] = GET_SUCCESS then
+			a[z] = temp[2]
+--			puts(1, sprintf("trans[%d] = %f, ", {z, a[z]}))
+		else
+			--abort(1)
+			puts(1, "\n>>>>>>>>>>>> Error in trans_input! <<<<<<<<<<<<\n")
+			trans = {0,0,0}
+			return
+		end if
+		position = arg[2]
+	end for
+	addItem( List1, sprintf("%3.2f, %3.2f, %3.2f", a))
+	trans = a
+end procedure
+
+global procedure rot_input()	-- perform a shell/hull rotation by the "a" vector, where a[1] is the amount along x axis, and so on
+	sequence arg, a
+
+	a = {0,0,0}
+	addItem( List1, "Rotate by vector:")
+	puts(1, "\n\n")
+
+	for z = 1 to 3 do
+		arg = get_argument_now(position, content)
+--			puts(1, "_" & arg[1] & "_")
+		temp = value(arg[1])
+		if temp[1] = GET_SUCCESS then
+			a[z] = temp[2]
+--			puts(1, sprintf("rot[%d] = %f, ", {z, a[z]}))
+		else
+			--abort(1)
+			puts(1, "\n>>>>>>>>>>>> Error in rot_input! <<<<<<<<<<<<\n")
+			rot = {0,0,0}
+			return
+		end if
+		position = arg[2]
+	end for
+	addItem( List1, sprintf("%3.2f, %3.2f, %3.2f", a))
+	rot = a
+end procedure
+
+global procedure file_input()
+	sequence arg, a, cirpos
+
+	position = 0
+	position = sfind_end("#translate", content)
+	if position != 0 then
+		trans_input()
+	else
+		trans = {0,0,0}
+	end if
+	position = 0
+	position = sfind_end("#rotate", content)
+	if position != 0 then
+		rot_input()
+	else
+		rot = {0,0,0}
+	end if
+	position = 0
+	position = sfind_end("#start", content)
+	puts(1, "\n#start")
+
+	if position = 0 then
+		puts(1,"\n\n\n>>>>>>>>>>>> ERROR: #start NOT FOUND <<<<<<<<<<<<\n")
+		return
+	end if
+
+
+	a = {0,0,0}
+	while 1 do
+		arg = get_argument_now(position, content)
+--		puts(1, "\n_" & arg[1] & "_\n")
+
+		if equal(arg[1], "#end") then
+			hull_data &= {section}
+			position = arg[2]
+			puts(1, "\n#end")
+--			puts(1, sprintf("\n#end----position = %d\n", position))
+			exit
+		elsif equal(arg[1][1], '#') then
+			hull_data &= {section}
+			section = ""
+			position = arg[2]
+			puts(1, "\n" & arg[1])
+		elsif equal(arg[1], "+circlexz") then
+			for z = 1 to 3 do
+				arg = get_argument_now(arg[2], content)
+				temp = value(arg[1])
+				if temp[1] = GET_SUCCESS then
+					a[z] = temp[2]
+--					addItem( List1, sprintf("a[%d] = %f, ", {z, a[z]}))
+--					puts(1, sprintf("a[%d] = %f, ", {z, a[z]}))
+				else
+					puts(1, "\n>>>>>>>>>>>> Error in file_input (+circlexz position)! <<<<<<<<<<<<<\n")
+					abort(1)
+				end if
+			end for
+			puts(1, sprintf("\n+circlexz %3.2f, %3.2f, %3.2f, ", a))
+			cirpos = a
+			for z = 1 to 3 do
+				arg = get_argument_now(arg[2], content)
+				temp = value(arg[1])
+				if temp[1] = GET_SUCCESS then
+					a[z] = temp[2]
+--					addItem( List1, sprintf("a[%d] = %f, ", {z, a[z]}))
+--					puts(1, sprintf("a[%d] = %f, ", {z, a[z]}))
+				else
+					puts(1, "\n>>>>>>>>>>>> Error in file_input (+circlexz semiaxles)! <<<<<<<<<<<<<\n")
+					abort(1)
+				end if
+			end for
+			puts(1, sprintf("  %3.2f, %3.2f, %d", a))
+			position = arg[2]
+--			puts(1, sprintf("\n#-------circlexz position = %d    ", position))
+			section = {}
+			for i = 1 to a[3] do
+				section &= {{cirpos[1]+a[1]*sin(2*PI/a[3]*i), cirpos[2], cirpos[3]+a[2]*cos(2*PI/a[3]*i)}}
+			end for
+		elsif equal(arg[1], "+circlexy") then
+			for z = 1 to 3 do
+				arg = get_argument_now(arg[2], content)
+				temp = value(arg[1])
+				if temp[1] = GET_SUCCESS then
+					a[z] = temp[2]
+--					addItem( List1, sprintf("a[%d] = %f, ", {z, a[z]}))
+--					puts(1, sprintf("a[%d] = %f, ", {z, a[z]}))
+				else
+					puts(1, "\n>>>>>>>>>>>> Error in file_input (+circlexy position)! <<<<<<<<<<<<<\n")
+					abort(1)
+				end if
+			end for
+			puts(1, sprintf("\n+circlexy %3.2f, %3.2f, %3.2f, ", a))
+			cirpos = a
+			for z = 1 to 3 do
+				arg = get_argument_now(arg[2], content)
+				temp = value(arg[1])
+				if temp[1] = GET_SUCCESS then
+					a[z] = temp[2]
+--					addItem( List1, sprintf("a[%d] = %f, ", {z, a[z]}))
+--					puts(1, sprintf("a[%d] = %f, ", {z, a[z]}))
+				else
+					puts(1, "\n>>>>>>>>>>>> Error in file_input (+circlexy semiaxles)! <<<<<<<<<<<<<\n")
+					--abort(1)
+				end if
+			end for
+			puts(1, sprintf("  %3.2f, %3.2f, %d", a))
+			position = arg[2]
+--			puts(1, sprintf("\n#-------circlexy position = %d    ", position))
+			section = {}
+			for i = 1 to a[3] do
+				section &= {{cirpos[1]+a[1]*sin(2*PI/a[3]*i), cirpos[2]+a[2]*cos(2*PI/a[3]*i), cirpos[3]}}
+			end for
+		else
+			for z = 1 to 3 do
+				if z != 1 then
+					arg = get_argument_now(arg[2], content)
+		--			puts(1, "_" & arg[1])
+				end if
+				if arg[1][1] = '@' then
+					temp = value(arg[1][2..length(arg[1])])
+					if temp[1] = GET_SUCCESS then
+						a[z] = hull_data[length(hull_data)][length(section)+1][z] + temp[2]
+--						addItem( List1, sprintf("a[%d] = %f, ", {z, a[z]}))
+--						puts(1, sprintf("a[%d] = %f, ", {z, a[z]}))
+					else
+						--abort(1)
+						puts(1, "\n>>>>>>>>>>>> Error in file_input (wrong incremental \"@\" data entry)! <<<<<<<<<<<<<\n")
+					end if
+				else
+					temp = value(arg[1])
+					if temp[1] = GET_SUCCESS then
+						a[z] = temp[2]
+--						addItem( List1, sprintf("a[%d] = %f, ", {z, a[z]}))
+--						puts(1, sprintf("a[%d] = %f, ", {z, a[z]}))
+					else
+						--abort(1)
+						puts(1, "\n>>>>>>>>>>>> Error in file_input (multipoint section data)! <<<<<<<<<<<<<\n")
+					end if
+				end if
+			end for
+			puts(1, sprintf("\n%3.2f, %3.2f, %3.2f", a))
+
+			position = arg[2]
+--			puts(1, sprintf("\n--------position = %d    ", position))
+
+			section &= {a}
+		--	print(1,hull_data)
+		end if
+	end while
+end procedure
+
+global procedure rotfile_input()
+	sequence arg, a
+
+	position = 0
+	position = sfind_end("#rotstart", content)
+	puts(1,"\n\n#rotstart")
+--	puts(1, sprintf("\n#rotstart--position = %d    ", position))
+--	addItem( List1, "#rotstart")
+
+	if position = 0 then
+		puts(1,"\n\n\n>>>>>> ERRORE: #rotstart NON TROVATO <<<<<<\nReading file...\n")
+		return
+	end if
+
+
+	a = {0,0,0,0,0,0}
+	while 1 do
+		arg = get_argument_now(position, content)
+--		puts(1, "\n_" & arg[1] & "_\n")
+
+		if equal(arg[1], "#rotend") then
+			rot_data &= {section}
+			position = arg[2]
+			puts(1, "\n#rotend")
+--			puts(1, sprintf("\n#rotend----position = %d\n", position))
+--			addItem( List1, "#rotend")
+			exit
+		elsif equal(arg[1][1], '#') then
+			rot_data &= {section}
+			section = ""
+			position = arg[2]
+			puts(1, "\n" & arg[1])
+--			puts(1, sprintf("\n#-------position = %d    ", position))
+--			addItem( List1, "#")
+		else
+
+			for z = 1 to 6 do
+				if z != 1 then	-- for z=1 argument already present in "arg" sequence
+					arg = get_argument_now(arg[2], content)
+		--			puts(1, "_" & arg[1])
+				end if
+				temp = value(arg[1])
+				if temp[1] = GET_SUCCESS then
+					a[z] = temp[2]
+--					addItem( List1, sprintf("a[%d] = %f, ", {z, a[z]}))
+--					puts(1, sprintf("a[%d] = %f, ", {z, a[z]}))
+				else
+					--abort(1)
+					puts(1, "\n>>>>>>>>>>>> Error in  rotfile input! <<<<<<<<<<<<\n")
+				end if
+			end for
+			puts(1, sprintf("\n%3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f", a))
+--			addItem( List1, sprintf("%3.1f,%3.1f,%3.1f,%3.1f,%3.1f,%3.1f", a))
+--			addItem( List1, sprintf("P=%3.1f,%3.1f,%3.1f", a[1..3]))
+--			addItem( List1, sprintf("R=%3.1f,%3.1f,%3.1f", a[4..6]))
+
+
+			position = arg[2]
+--			puts(1, sprintf("\n--------position = %d    ", position))
+
+			section = a	--{a[1], a[2], a[3]}
+		--	print(1,rot_data)
+		end if
+	end while
+end procedure
+
+function translate_(sequence hull_d, sequence trans_)
+		atom len1, len2
+
+	len1 = length(hull_d)
+	len2 = length(hull_d[1])
+
+-- translate hull_d by trans_ vector
+	for i=1 to len1 do
+		for j=1 to len2 do
+			hull_d[i][j] += trans_
+		end for
+	end for
+	return hull_d
+end function
+
+function rotate_(sequence hull_d, sequence rot_)
+	atom len1, len2, rx, alfa
+
+	len1 = length(hull_d)
+	len2 = length(hull_d[1])
+	rot_ = 1/180*PI * rot_
+
+-- rotate x axis by rot[1]
+	if rot_[1] != 0 then
+		for i=1 to len1 do
+			for j=1 to len2 do
+				if  hull_d[i][j][2] !=0 then
+					rx = sqrt(hull_d[i][j][3]*hull_d[i][j][3]+hull_d[i][j][2]*hull_d[i][j][2])
+					alfa = arctan(hull_d[i][j][3]/hull_d[i][j][2])
+					if (hull_d[i][j][3] < 0 and hull_d[i][j][2] < 0) or (alfa = 0 and hull_d[i][j][2] < 0) then
+						alfa += PI
+					elsif (hull_d[i][j][3] > 0 and hull_d[i][j][2] < 0) then
+						alfa += PI
+					end if
+				else
+					if hull_d[i][j][3] >= 0 then
+						alfa = arctan(0) + PI/2
+						rx = hull_d[i][j][3]
+					else
+						alfa = arctan(0) - PI/2
+						rx = - hull_d[i][j][3]
+					end if
+				end if
+				hull_d[i][j][2] = rx*cos(alfa+rot_[1])
+				hull_d[i][j][3] = rx*sin(alfa+rot_[1])
+			end for
+		end for
+	end if
+
+-- rotate y axis by rot[2]
+	if rot_[2] != 0 then
+		for i=1 to len1 do
+			for j=1 to len2 do
+				if  hull_d[i][j][3] !=0 then
+					rx = sqrt(hull_d[i][j][1]*hull_d[i][j][1]+hull_d[i][j][3]*hull_d[i][j][3])
+					alfa = arctan(hull_d[i][j][1]/hull_d[i][j][3])
+					if (hull_d[i][j][1] < 0 and hull_d[i][j][3] < 0) or (alfa = 0 and hull_d[i][j][3] < 0) then
+						alfa += PI
+					elsif (hull_d[i][j][1] > 0 and hull_d[i][j][3] < 0) then
+						alfa += PI
+					end if
+				else
+					if hull_d[i][j][1] >= 0 then
+						alfa = arctan(0) + PI/2
+						rx = hull_d[i][j][1]
+					else
+						alfa = arctan(0) - PI/2
+						rx = - hull_d[i][j][1]
+					end if
+				end if
+				hull_d[i][j][3] = rx*cos(alfa+rot_[2])
+				hull_d[i][j][1] = rx*sin(alfa+rot_[2])
+			end for
+		end for
+	end if
+
+-- rotate z axis by rot[3]
+	if rot_[3] != 0 then
+		for i=1 to len1 do
+			for j=1 to len2 do
+				if  hull_d[i][j][1] !=0 then
+					rx = sqrt(hull_d[i][j][2]*hull_d[i][j][2]+hull_d[i][j][1]*hull_d[i][j][1])
+					alfa = arctan(hull_d[i][j][2]/hull_d[i][j][1])
+					if (hull_d[i][j][2] < 0 and hull_d[i][j][1] < 0) or (alfa = 0 and hull_d[i][j][1] < 0) then
+						alfa += PI
+					elsif (hull_d[i][j][2] > 0 and hull_d[i][j][1] < 0) then
+						alfa += PI
+					end if
+				else
+					if hull_d[i][j][2] >= 0 then
+						alfa = arctan(0) + PI/2
+						rx = hull_d[i][j][2]
+					else
+						alfa = arctan(0) - PI/2
+						rx = - hull_d[i][j][2]
+					end if
+				end if
+				hull_d[i][j][1] = rx*cos(alfa+rot_[3])
+				hull_d[i][j][2] = rx*sin(alfa+rot_[3])
+			end for
+		end for
+	end if
+--	hull_data = hull_d
+	return hull_d
+end function
+
+function apply_rot( sequence hull_d )
+	atom len1, len2
+	sequence hull_d_
+	hull_d_ = hull_d
+	len1 = length(hull_d)
+	for i=len1 to 1 by -1 do
+		hull_d_[i..len1] = translate_(hull_d[i..len1],	{-hull_d[i][1][1]+rot_data[i][1], -hull_d[i][1][2]+rot_data[i][2], -hull_d[i][1][3]+rot_data[i][3]})
+		hull_d_[i..len1] = rotate_(hull_d_[i..len1], 	{rot_data[i][4], rot_data[i][5], rot_data[i][6]})
+		hull_d_[i..len1] = translate_(hull_d_[i..len1],	{ hull_d[i][1][1]-rot_data[i][1],  hull_d[i][1][2]-rot_data[i][2],  hull_d[i][1][3]-rot_data[i][3]})
+		hull_d = hull_d_
+	end for
+	return hull_d
+end function
+
+global function Open_shuf(sequence default)
+	sequence fname
+	fname = getOpenFileName(theWin, default, {"shuf file (.shuf)", "*.shuf"})
+	if not sequence(fname) or equal(fname,"") then
+		puts(1, "\n\n>>>>>> Error in filename!!! <<<<<<\n")
+		return ""
+	end if
+	setText(Hint_text, ".shuf input file selected")
+	return fname
+end function
+
+global function Open_rot(sequence default)
+	sequence fname
+	fname = getOpenFileName(theWin, default, {"rot file (.rot)", "*.rot", "shuf file (.shuf)", "*.shuf"})
+	if not sequence(fname) or equal(fname,"") then
+		puts(1, "\n\n>>>>>> Error in filename!!! <<<<<<\n")
+		return ""
+	end if
+	setText(Hint_text, ".shuf rotation file selected")
+	return fname
+end function
+
+global function open_input_file()
+--	sequence fname
+--	fname = Open_shuf("input.shuf")
+--	if equal(fname, "") then return 0 end if
+	if not sequence(input_file) or equal(input_file,"") then
+		return 0
+	else
+		file = open(input_file, "r")
+	end if
+	content = {}
+	hull_data = ""
+	section = ""
+
+	puts(1,"\n\n\n====== LOADING INPUT FILE ======\nReading file...\n")
+
+	content = load_file(file)
+--	while 1 do
+--	    temp = getc(file)
+--	    if temp = -1 then
+--	        exit
+--	    end if
+--	    content &= temp
+--	end while
+
+	close(file)
+--	print(1,"\n" & content & "\n")
+	position = sfind_end("#start", content)
+	puts(1, "\n#start")
+
+	file_input()
+--	stl_out = ""
+	hull_data = rotate_(hull_data, rot)
+	hull_data = translate_(hull_data, trans)
+	setText(Hint_text, "Hull loaded")
+	return 1
+end function
+
+global function open_rot_file()
+--	sequence	fname
+--	fname = Open_rot("input.rot")
+	if not sequence(rot_file) or equal(rot_file,"") then
+		return 0
+	else
+		file = open(rot_file, "r")
+	end if
+	content = {}
+	rot_data = {}
+
+	puts(1,"\n\n\n====== LOADING ROTATION INPUT FILE ======\n")
+
+	content = load_file(file)
+--	while 1 do
+--	    temp = getc(file)
+--	    content &= temp
+--	    if temp = -1 then
+--	        content = content[1..length(content)-1]
+--	        exit
+--	    end if
+--	end while
+
+	close(file)
+--	print(1,"\n" & content & "\n")
+--	position = sfind_end("#start", content)
+--	puts(1, sprintf("\n#start--position = %d    ", position))
+
+	rotfile_input()
+	return 1
+end function
+
+
+global procedure  onClick_BMake_solid()		-- every section boundary must be convex
+	atom len1, len2, rotflag
+	sequence v1, v2, vn, out_file
+
+	if open_input_file() = 0 then return end if
+	addItem( List1, "GENERATING SOLID HULL FILE:")
+
+	if isChecked(BRotFile) then
+		if open_rot_file() = 1 then
+			rotflag = 1
+		else
+			rotflag = 0
+		end if
+	else
+		rotflag = 0
+	end if
+
+	out_file = getText(OUTPUTtext)
+	file = open(out_file,"w")
+	if length(out_file) > LIST1_W then
+		addItem( List1, "..." & out_file[length(out_file)-LIST1_W..length(out_file)])
+	else
+		addItem( List1, out_file)
+	end if
+
+	puts(1,"\n\n\n====== SAVING " & out_file & " FILE ======\n")
+
+	len1 = length(hull_data)
+	len2 = length(hull_data[1])
+
+	if len1<2 then
+		puts(1, "\n\n\n>>>>>>>>>> Error: input file with less than 2 levels! <<<<<<<<<<\n")
+		return
+	end if
+
+	if rotflag = 1 then
+		hull_data = apply_rot(hull_data)
+	end if
+
+	OShull = ""	--OpenSCAD polyhedron() transformed in solid object by the hull() statement
+	for i=1 to len1-1 do
+		puts(file, 	"hull() {polyhedron (\n\tpoints = [")
+		OShull &=	"hull() {polyhedron (\n\tpoints = ["
+		for j=1 to len2 do
+			puts(file, 	sprintf("[%f,%f,%f],", {hull_data[i][j][1], hull_data[i][j][2], hull_data[i][j][3]}))
+			OShull &=	sprintf("[%f,%f,%f],", {hull_data[i][j][1], hull_data[i][j][2], hull_data[i][j][3]})
+		end for
+		for j=1 to len2 do
+			if not (j = len2) then
+				puts(file, 	sprintf("[%f,%f,%f],", {hull_data[i+1][j][1], hull_data[i+1][j][2], hull_data[i+1][j][3]}))
+				OShull &=	sprintf("[%f,%f,%f],", {hull_data[i+1][j][1], hull_data[i+1][j][2], hull_data[i+1][j][3]})
+			else
+				puts(file,  sprintf("[%f,%f,%f]", {hull_data[i+1][j][1], hull_data[i+1][j][2], hull_data[i+1][j][3]}))
+				OShull &=	sprintf("[%f,%f,%f]", {hull_data[i+1][j][1], hull_data[i+1][j][2], hull_data[i+1][j][3]})
+			end if
+		end for
+
+		puts(file, 	"],\n\tfaces = [")
+		OShull &=	"],\n\tfaces = ["
+		for j=0 to len2-2 do
+			puts(file, 	sprintf("[%d, %d, %d], ", 	{j+1, j, len2+j}))
+			OShull &=	sprintf("[%d, %d, %d], ", 	{j+1, j, len2+j})
+			puts(file, 	sprintf("[%d, %d, %d], ", 	{j+1, len2+j,   len2+j+1}))
+			OShull &=	sprintf("[%d, %d, %d], ", 	{j+1, len2+j,   len2+j+1})
+		end for
+		puts(file, 		sprintf("[%d, %d, %d], ", 		{0,	 len2-1,   len2*2-1}))
+		OShull &=		sprintf("[%d, %d, %d], ", 		{0,	 len2-1,   len2*2-1})
+		puts(file, 		sprintf("[%d, %d, %d]", 		{0,	 len2*2-1, len2}))
+		OShull &=		sprintf("[%d, %d, %d]", 		{0,	 len2*2-1, len2})
+		puts(file, 	"]);\n}\n")
+		OShull &=	"]);\n}\n"
+	end for
+	close(file)
+	setText(Hint_text, "Output solid object *.scad file generated")
+	addItem( List1, "SOLID HULL GENERATED")
+
+end procedure
+
+
+
+
+
+
+global procedure  onClick_BMake_shell()	-- create a multi-face empty structure
+	atom len1, len2, rotflag
+	sequence Text, out_file
+--	sequence v1, v2, vn
+
+	if open_input_file() = 0 then return end if
+	addItem( List1, "GENERATING SHELL FILE:")
+
+	if isChecked(BRotFile) then
+		if open_rot_file() = 1 then
+			rotflag = 1
+		end if
+	else
+		rotflag = 0
+	end if
+
+	Text = getText(OUTPUTtext)
+	out_file = Text[1..length(Text)-5]&"_EP.scad"
+	file = open(out_file,"w")
+	if length(out_file) > LIST1_W then
+		addItem( List1, "..." & out_file[length(out_file)-LIST1_W..length(out_file)])
+	else
+		addItem( List1, out_file)
+	end if
+
+	puts(1,"\n\n\n====== SAVING SHELL (empty polyhedron) " & out_file & " FILE ======\n")
+
+	puts(file, "polyhedron (\n\tpoints = [")
+
+	len1 = length(hull_data)
+	len2 = length(hull_data[1])
+
+	if len1<2 then
+		puts(1, "\n\n\n>>>>>>>>>>> Error: input file with less than 2 levels! <<<<<<<<<<\n")
+		return
+	end if
+	if rotflag = 1 then
+		hull_data = apply_rot(hull_data)
+	end if
+
+	for i=1 to len1 do
+		for j=1 to len2 do
+			if not (i = len1 and j = len2) then
+				puts(file, sprintf("[%f,%f,%f],", {hull_data[i][j][1], hull_data[i][j][2], hull_data[i][j][3]}))
+			else
+				puts(file, sprintf("[%f,%f,%f]", {hull_data[i][j][1], hull_data[i][j][2], hull_data[i][j][3]}))
+			end if
+		end for
+	end for
+
+	puts(file, "],\n\tfaces = [")
+
+--	base1
+	for j=2 to len2-1 do
+		puts(file, sprintf("[%d,%d,%d],", {0, j-1, j}))
+	end for
+
+	puts(file, "\n\n")
+
+--	parallelepipedi/coni intermedi
+	for i=1 to len1 - 1 do
+		for j=0 to len2-2 do
+			puts(file, sprintf("[%d, %d, %d], ", 	{len2*(i-1)+j+1, len2*(i-1)+j, len2*(i)+j}))
+			puts(file, sprintf("[%d, %d, %d], ", 	{len2*(i-1)+j+1, len2*(i)+j,   len2*(i)+j+1}))
+		end for
+		puts(file, sprintf("[%d, %d, %d], ", 		{len2*(i-1),	 len2*(i)-1,   len2*(i+1)-1}))
+		puts(file, sprintf("[%d, %d, %d], ", 		{len2*(i-1),	 len2*(i+1)-1, len2*(i)}))
+	end for
+
+--	base2
+	puts(file, "\n\n")
+	for j=2 to len2-2 do
+		puts(file, sprintf("[%d,%d,%d],", {(len1-1)*len2, (len1-1)*len2+j, (len1-1)*len2+j-1}))
+	end for
+	puts(file, sprintf("[%d,%d,%d]", {(len1-1)*len2, len1*len2-1, len1*len2-2}))
+	puts(file, "]);")
+
+	close(file)
+	setText(Hint_text, "Output Empty Polyhedron *_EP.scad file generated")
+	addItem( List1, "SHELL GENERATED")
+end procedure
+
+
+
+
+
+global procedure  onClick_BPrSection()
+	puts(1, "\n")
+--	print(1,section)
+	puts(1, "\n")
+	print(1,hull_data)
+	setText(Hint_text, "Hull_data printed as Euphoria object on standard output")
+end procedure
+
+
+
+
+
+global procedure  onClick_BSave()	-- save a translated and rotated .shuf file, with
+	atom len1, len2, rx, alfa, rotflag		-- absolute coordinates
+	sequence Text, out_file
+
+	if open_input_file() = 0 then return end if
+	addItem( List1, "GENERATING ABSOLUTE SHuFFle FILE:")
+
+	if isChecked(BRotFile) then
+		if open_rot_file() = 1 then
+			rotflag = 1
+		end if
+	else
+		rotflag = 0
+	end if
+
+	Text = getText(OUTPUTtext)
+	out_file = Text[1..length(Text)-5]&"_ABS.shuf"
+	file = open(out_file,"w")
+	if length(out_file) > LIST1_W then
+		addItem( List1, "..." & out_file[length(out_file)-LIST1_W..length(out_file)])
+	else
+		addItem( List1, out_file)
+	end if
+
+	puts(1,"\n\n\n====== SAVING ABSOLUTE " & out_file & " FILE ======\n")
+
+	puts(file,"#start\n")
+
+	len1 = length(hull_data)
+	len2 = length(hull_data[1])
+
+	if len1<2 then
+		puts(1, "\n\n\n>>>>>>>>>>> Error: input file with less than 2 levels! <<<<<<<<<<\n")
+		return
+	end if
+	if rotflag = 1 then
+		hull_data = apply_rot(hull_data)
+	end if
+
+
+	for i=1 to len1 do
+		if i != 1 then
+			printf(file, "#%d\n", i)
+		end if
+		for j=1 to len2 do
+			puts(file, sprintf("%3.1f %3.1f %3.1f\n",{hull_data[i][j][1], hull_data[i][j][2], hull_data[i][j][3]}))
+		end for
+	end for
+	puts(file,"#end")
+	close(file)
+	setText(Hint_text, "Outuput *_ABS.shuf (with absolute coords) file generated")
+	addItem( List1, "ABSOLUTE SHuFFle FILE GENERATED")
+end procedure
+
+
+
+
+global procedure  onClick_BCreateSupportArray()
+	atom len, len1, len2, min_x, max_x, min_y, max_y, min_z, max_z, count_x, count_y, rx, ry, flag
+	atom sm, em, sn, en, s_x, s_y, s_z, e_x, e_y, e_z
+	sequence sup_z, dummy, out_file, out_text
+
+	if open_input_file() = 0 then return end if
+
+
+	if equal(hull_data,"") then
+		puts(1, "\n\n\n>>>>>> NULL hull_data FILE <<<<<<\n")
+		return
+	end if
+	onClick_BMake_solid()
+	len1 = length(hull_data)
+	len2 = length(hull_data[1])
+
+	if len1<2 then
+		puts(1, "\n\n\n>>>>>>>>>>> Errore: input file con meno di 2 livelli! <<<<<<<<<<\n")
+		return
+	end if
+	addItem( List1, "GENERATING SUPPORT ARRAY:")
+--	file = open("out_supports.scad","w")
+	out_text = getText(OUTPUTtext)
+	len = length(out_text)
+	out_file = out_text[1..len-5] & "_SA.scad"
+	puts(1, "\n_" & out_file & "_")
+	file = open(out_file,"w")
+	if length(out_file) > LIST1_W then
+		addItem( List1, "..." & out_file[length(out_file)-LIST1_W..length(out_file)])
+	else
+		addItem( List1, out_file)
+	end if
+	puts(1, "\n\n\n====== Generating " & out_file & " Support Array ======\n")
+
+--	onClick_BMake_solid()
+
+	min_x = hull_data[1][1][1]
+	max_x = hull_data[1][1][1]
+	min_y = hull_data[1][1][2]
+	max_y = hull_data[1][1][2]
+	min_z = hull_data[1][1][3]
+	max_z = hull_data[1][1][3]
+
+
+	puts(file, "$fn=10;\nmodule empty(){\n" & OShull)
+	puts(file, "\n}\nmodule support(h_){\n\ttranslate([0,0,2*h_])\n\t\tintersection(){\n\t\t\tdifference(){\n\t\t\t\tunion(){\n\t\t\t\t\ttranslate([0,0,h_/2]){\n\t\t\t\t\t\tcube([h_, .4, 2*h_], center = true);\n\t\t\t\t\t\tcube([.4, h_, 2*h_], center = true);\n\t\t\t\t\t}\n\t\t\t\t\ttranslate([0,h_/5,h_/2])\n\t\t\t\t\t\tcube([h_, .4, 2*h_], center = true);\n\t\t\t\t\ttranslate([0,2*h_/5,h_/2])\n\t\t\t\t\t\tcube([h_, .4, 2*h_], center = true);\n\t\t\t\t\ttranslate([0,-h_/5,h_/2])\n\t\t\t\t\t\tcube([h_, .4, 2*h_], center = true);\n\t\t\t\t\ttranslate([0,-2*h_/5,h_/2])\n\t\t\t\t\t\tcube([h_, .4, 2*h_], center = true);\n\t\t\t\t}\n\t\t\t\t\ttranslate([0,0,0])\n\t\t\t\t\tcylinder(d1=1.7*h_, d2=h_/5, h=3/5*h_);\n\t\t\t}\n\t\t\tcylinder(d1=h_/4,d2=14*h_/5,h=7*h_/5);\n\t\t}\n\tdifference(){\n\t\tcylinder(d=.852*h_,h=5*h_/2);\n\t\ttranslate([0,0,-1])\n\t\t\tcylinder(d=.852*h_-0.8,h=5*h_/2+2);\n\t}\n}\n")
+
+	for i=1 to len1 do		--searching for max & min
+		for j=1 to len2 do
+			if hull_data[i][j][1] < min_x then min_x = hull_data[i][j][1] end if
+			if hull_data[i][j][1] > max_x then max_x = hull_data[i][j][1] end if
+			if hull_data[i][j][2] < min_y then min_y = hull_data[i][j][2] end if
+			if hull_data[i][j][2] > max_y then max_y = hull_data[i][j][2] end if
+			if hull_data[i][j][3] < min_z then min_z = hull_data[i][j][3] end if
+			if hull_data[i][j][3] > max_z then max_z = hull_data[i][j][3] end if
+		end for
+	end for
+	for z=1 to N_DOUBLINGS do
+		for i=1 to len1 do		--section points multiplier
+			dummy = hull_data[i]
+			len = length(dummy)
+			for j=1 to (len2-1)*2+1 by 2 do
+				if j != (len2-1)*2+1 then
+					dummy = dummy[1..j] & {{(dummy[j][1]+dummy[j+1][1])/2, (dummy[j][2]+dummy[j+1][2])/2,(dummy[j][3]+dummy[j+1][3])/2}} & dummy[j+1..len]
+				else
+					dummy = dummy[1..j] & {{(dummy[j][1]+dummy[1][1])/2, (dummy[j][2]+dummy[1][2])/2,(dummy[j][3]+dummy[1][3])/2}}
+				end if
+--				pretty_print(1, dummy, {})
+				len = length(dummy)
+			end for
+			hull_data[i] = dummy
+		end for
+		len1 = length(hull_data)
+		len2 = length(hull_data[1])
+	end for
+
+	count_x = MAX_M			--MAX_M					-- floor((max_x-min_x)/XSTEP)+1
+	count_y = MAX_N			--MAX_N					-- floor((max_y-min_y)/YSTEP)+1
+	sup_z = repeat(repeat(0, count_x), count_y)
+
+
+	for n=0 to count_y-1 do
+		for m=0 to count_x-1 do
+			for i=1 to len1 do
+				for j=1 to len2 do
+					rx = (hull_data[i][j][1] - min_x)/count_x
+					ry = (hull_data[i][j][2] - min_y)/count_y
+					if rx >= m and rx < m+1 and ry >= n and ry < n+1 then
+						if sup_z[m+1][n+1] != 0 and hull_data[i][j][3] + min_z > sup_z[m+1][n+1] then
+							sup_z[m+1][n+1] = hull_data[i][j][3]+min_z
+						elsif sup_z[m+1][n+1] = 0 then
+							sup_z[m+1][n+1] = hull_data[i][j][3]+min_z
+						end if
+					end if
+				end for
+			end for
+		end for
+	end for
+
+
+
+	printf(file,  "\nmax_z=[[%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d],\n", sup_z[1])	-- every row is composed of count_y "%d" symbols
+	for i = 2 to count_x-1 do
+		printf(file,"       [%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d],\n", sup_z[i])
+	end for
+	printf(file,    "       [%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d]];", 	sup_z[count_x])
+
+
+	puts(file,"")
+	printf(file, "\nintersection(){\n\trotate([%f,%f,%f])\n\t\ttranslate([%f,%f,%f])\n\t\t\tempty();\n\tfor (i=[0:%d-1]){\n\t\tfor(j=[0:%d-1]){\n\t\t\tif (max_z[i][j]!=0.0){\n\t\t\t\ttranslate([i*20,j*20,max_z[i][j]-60])\n\t\t\t\t\tsupport(20);\n\t\t\t}\n\t\t}\n\t}\n}",{rot[1], rot[2], rot[3], trans[1], trans[2], trans[3], count_x, count_y})
+
+	close(file)
+	puts(1, "\n\n\n====== Support Array " & out_file & " file generated ======\n")
+	setText(Hint_text, "\n\n====== Support Array " & out_file & " file generated ======")
+	addItem( List1, "SUPPORT ARRAY GENERATED")
+end procedure	--onClick_BCreateSupportArray()
+
+--procedure onClick_BSave_call()
+--	onClick_BSave("input.shuf")
+--end procedure
+
+procedure onClick_BINPUT()
+--	open_input_file()
+	sequence dummy
+	dummy = Open_shuf("")
+	if not equal(dummy, "") then
+		puts(1,"\ninput_file = " & dummy & "\n")
+--		puts(logfile,"dummy = " & dummy & "\n")
+		input_file = dummy
+		setText(INPUTtext, input_file)
+		setText(OUTPUTtext, input_file[1..length(input_file)-5] & ".scad")
+	end if
+end procedure
+
+procedure onClick_BrotINPUT()
+--	open_rot_file()
+	sequence dummy
+	dummy = Open_rot("")
+	puts(1,"\nrot_file = " & dummy & "\n")
+	if not equal(dummy, "") then
+		rot_file = dummy
+		setText(rotINPUTtext, dummy)
+	end if
+end procedure
+
+procedure onClick_BRotFile()
+	if isChecked(BRotFile) then
+		setText(BRotFile, "RotFile On")
+		setWindowBackColor(theWin, rgb(194+27,164+24,228-20))
+	else
+		setText(BRotFile, "RotFile Off")
+		setWindowBackColor(theWin, rgb(194,164,228))
+	end if
+end procedure
+
+procedure onClick_MAbout()
+	atom result
+	result = message_box(
+fileName & " is a program that converts a \"*.shuf\" object descriptor into an\n"&
+" OpenSCAD \"*.scad\" file.\n"&
+"\n"&
+"======== Copyright (C) 2020 Claudio Emiliozzi, Italy ========\n"&
+"\n"&
+"This program (and correlated file formats) is free software: you can \n"&
+"      redistribute it and/or modify it under the terms of the\n"&
+"GNU General Public License as published by theFree Software Foundation,\n"&
+" either version 3 of the License, or (at your option) any later version.\n"&
+"This program is distributed in the hope that it will be useful,\n"&
+"but WITHOUT ANY WARRANTY; without even the implied warranty of \n"&
+"     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"&
+"See the GNU General Public License for more details. You should have\n"&
+" received a copy of the GNU General Public License along with this program.\n"&
+"If not, see <https://www.gnu.org/licenses/>.\n"&
+"               ", "About", 0 )
+end procedure
+
+
+procedure onClick_MInfo_()
+	atom result
+	result = message_box(
+"      " & fileName & " is a program that converts a \"*.shuf\" \n"&
+"      object descriptor into an OpenSCAD \"*.scad\" file.\n"&
+"\n"&
+"       ======== Copyright (C) 2020 Claudio Emiliozzi, Italy ========\n"&
+"\n"&
+"      Definitions and use:\n"&
+"\n"&
+"      SLICE: the representation of an object by SHuFFle file is like breaking\n"&
+"      it by n slices, then choosing some points on the contour of every section\n"&
+"\n"&
+"      SHELL: an OpenSCAD polyhedron. It's \"empty\": in other\n"&
+"      words you cannot do boolean operations on it (difference() etc.)\n"&
+"\n"&
+"      HULL: convex OpenSCAD polyhedron, that become a solid\n"&
+"      applying the hull() function\n"&
+"\n"&
+"      SHUFFLE FILE: a file that describes a Shell (and/or Hull) in a simple manner,\n"&
+"      by lists of points that forms the contour of every section of the object\n"&
+"\n"&
+"      SUPPORT ARRAY: to 3d-print an object, you need a support, usually\n"&
+"      generated by the slicer. By this function you can build your own support,\n"&
+"      with less filament waste.\n"&
+"\n"&
+"      ROTFILE: a file that describes how the object in shuffle file is bended\n"&
+"\n"&
+"      OpenSCAD is a free software Copyrighted (C) by \"The OpenSCAD Developers\"\n"&
+"\n"&
+"      Visit: www.RapidEuphoria.com for more informations on OpenEuphoria\n"&
+"\n"&
+"      Thanks to Win32Lib v.0.45r developers\n"&
+"\n"&
+"      Read Documentation.txt for more informations\n"&
+"               ", "Info", 0 )
+
+end procedure
+
+onClick[MAbout] = routine_id("onClick_MAbout")
+onClick[MInfo_] = routine_id("onClick_MInfo_")
+
+onClick[BMake_shell] = routine_id("onClick_BMake_shell")
+onClick[BMake_solid] = routine_id("onClick_BMake_solid")
+onClick[BSave] = routine_id("onClick_BSave")
+--onClick[BPrSection] = routine_id("onClick_BPrSection")
+onClick[BCreateSupportArray] = routine_id("onClick_BCreateSupportArray")
+onClick[BINPUT] = routine_id("onClick_BINPUT")
+onClick[BRotFile] = routine_id("onClick_BRotFile")
+onClick[BrotINPUT] = routine_id("onClick_BrotINPUT")
+
+--========================================================================
+
+		 -- entrypoint
+		 WinMain(theWin, Normal)
+
+--CH==t==R==i==I==c==S==n==T==i==U==v==S===<<<>>>===s==V==u==I==t==N==s==C==i==I==r==T==hC------
+----CH==t==R==a==I==n==S==g==T==e==U==r==S===<<<>>>===s==R==u==E==t==G==s==N==i==A==r==T==hC----
+------CH==t==R==a==I==r==S==e==T==p==U==m==S==i<<<>>>I==s==M==u==P==t==E==s==R==i==A==r==T==hC--
