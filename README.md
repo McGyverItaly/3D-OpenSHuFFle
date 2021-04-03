@@ -7,7 +7,7 @@ Installation and use:
 
 Otherwise:
 
-1b) Double-click on 3D-SHuFFle.exe
+1b) Double-click on 3D-OpenSHuFFle.exe
 
 2) Once opened, click on "input file", then choose a file "*.shuf" to process.
 
