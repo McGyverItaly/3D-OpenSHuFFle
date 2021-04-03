@@ -1,5 +1,5 @@
 # 3D-OpenSHuFFle
-3D-SHuFFle is an OpenEuphoria Win32 program that creates complex OpenSCAD polyhedrons starting from a text file
+3D-OpenSHuFFle is an OpenEuphoria Win32 program that creates complex OpenSCAD polyhedrons starting from a text file
 
 Installation and use:
 
