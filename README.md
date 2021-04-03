@@ -1,4 +1,4 @@
-# 3D-SHuFFle
+# 3D-OpenSHuFFle
 3D-SHuFFle is an OpenEuphoria Win32 program that creates complex OpenSCAD polyhedrons starting from a text file
 
 Installation and use:
@@ -11,7 +11,7 @@ Otherwise:
 
 2) Once opened, click on "input file", then choose a file "*.shuf" to process.
 
-3) Optionally, you can choose a "*.rot" file pressing the "Rot Input File" button: this allow you to press the "ROtFile Off" button, that enable the bending of the resulting "*.scad" object.
+3) Optionally, you can choose a so-called "rotfile" (can be the same input file of point 2) pressing the "Rot Input File" button; pressing the "ROtFile Off" button, you enable the bending, sections scaling etc. of the resulting "*.scad" object.
 
 4) Press one or more of the big buttons; their functions are described in the Documentation.txt file
 
