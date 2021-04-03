@@ -16,3 +16,5 @@ Otherwise:
 4) Press one or more of the big buttons; their functions are described in the Documentation.txt file
 
 5) Test the resulting file/files under OpenSCAD.
+
+The examples airplane, foot_model, special_support, 2T_exhaust_pipe and diablo_game are provided to test the program and to have an idea of the potentiality.
