@@ -3,11 +3,11 @@
 
 Installation and use:
 
-1a) install Euphoria 3.1.1 Win32+Dos (e31setup.exe file included, or download it from http://www.rapideuphoria.com/v20.htm), then double-click on 3D-SHuFFle.exw file
+1a) install Euphoria 3.1.1 Win32+Dos (e31setup.exe file included, or download it from http://www.rapideuphoria.com/v20.htm), then double-click on 3D-OpenSHuFFle_11.exw file
 
 Otherwise:
 
-1b) Double-click on 3D-OpenSHuFFle.exe
+1b) Double-click on 3D-OpenSHuFFle_11.exe
 
 2) Once opened, click on "input file", then choose a file "*.shuf" to process.
 
