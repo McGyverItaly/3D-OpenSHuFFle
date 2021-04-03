@@ -1,8 +1,8 @@
-"3d-SHuFFle" RapidEuphoria program, version 1.0
-"SHell-HUll File Format 1.0" --> ".shuf" extension
-"Rotating Sections File 1.0" --> ".rot" extension
+"3d-OpenSHuFFle" OpenEuphoria program, version 1.1
+"SHell-HUll File Format 1.1" --> ".shuf" extension
+"Section Arrangement Sequence (& File) 1.1" --> ".shuf" extension
 
-Shuffle is a program that converts a ".shuf" object descriptor into an Openscad ".scad" file.
+3D-OpenSHuFFle: it's a program that converts a ".shuf" object descriptor ".shuf" into an OpenSCad ".scad" file.
 Copyright (C) 2020 Claudio Emiliozzi, Italy
 
 This program (and correlated files) is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
