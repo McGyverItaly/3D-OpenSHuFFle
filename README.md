@@ -3,17 +3,17 @@
 
 Installation and use:
 
-1a) install Euphoria 3.1.1 Win32+Dos (e31setup.exe file included, or download it from http://www.rapideuphoria.com/v20.htm), put 3D-OpenSHuFFle_11.exw in a directory with Win32lib.ew and utils.e, then double-click on 3D-OpenSHuFFle_11.exw file
+1a) install Euphoria 3.1.1 Win32+Dos (e31setup.exe file included, or download it from http://www.rapideuphoria.com/v20.htm), put 3D-OpenSHuFFle_11.exw in a directory with Win32lib.ew and utils.e, then double-click on 3D-OpenSHuFFle_11.exw file. The installation takes only 8 MBytes.
 
 Otherwise:
 
-1b) Double-click on 3D-OpenSHuFFle_11.exe (don't need any installation)
+1b) Double-click on 3D-OpenSHuFFle_11.exe (don't need any installation).
 
 2) Once opened, click on "input file", then choose a file "*.shuf" to process.
 
 3) Optionally, you can choose a so-called "rotfile" (can be the same input file of point 2) pressing the "Rot Input File" button; pressing the "ROtFile Off" button, you enable the bending, sections scaling etc. of the resulting "*.scad" object.
 
-4) Press one or more of the big buttons; their functions are described in the Documentation.txt file
+4) Press one or more of the big buttons; their functions are described in the Documentation.txt file.
 
 5) Test the resulting file/files under OpenSCAD. If it's already installed, simply double click on it. If you are modifiying the same file more times, OpenSCAD could require the F4+F5 buttons pressing (reload & refresh), depending on the setup. 
 
