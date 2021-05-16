@@ -1,7 +1,8 @@
 This is an early example of 2-stroke exhaust pipe. 
-Note: I can write everything outside the #start-#end sequence and 
+Note: I can write everything outside the start-end sequence and 
 the rotstart-rotend sequence.
-
+Once you opened the 3d-OpenSHuFFle_11.exw or 3d-OpenSHuFFle_11.exe, press the <Input file> button and select this file, then press <Rot.input file> and do the same.
+Only pressing the <RotFile Off> button, so that it will show "RotFile On" and the background will become of a lighter violet, the "rotfile" sequence will be processed.
 
 #start
 +circlexz 0 0 0 24 24 48
