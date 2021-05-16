@@ -13,8 +13,8 @@ Otherwise:
 
 3) Optionally, you can choose a so-called "rotfile" (can be the same input file of point 2.) pressing the "Rot Input File" button; pressing the "RotFile Off" button, you enable the bending, sections scaling etc. of the resulting "*.scad" object.
 
-4) Press one or more of the big buttons; their functions are described in the Documentation.txt file.
+4) Press one or more of the big buttons; their functions are described in the Documentation.pdf file.
 
 5) Test the resulting file/files under OpenSCAD. If it's already installed, simply double click on it. If you are modifiying the same file more times, OpenSCAD could require the F4+F5 buttons pressing (reload & refresh), depending on the setup. 
 
-The examples airplane, foot_model, special_support, 2T_exhaust_pipe and diablo_game are provided to test the program and to have an idea of the potentiality.
+The examples airplane, foot_model, special_support, 2T_exhaust_pipe and diablo_game are provided to test the program and to get an idea of the potentiality.
