@@ -24,3 +24,5 @@ Otherwise:
 6) Other functions are described in the Documentation.pdf file. In particular, you can start directly from a text file for mesh generation.
 
 Various examples are provided to test the application and get an idea of its potential..
+
+![Opentools1 6_screenshot_](https://github.com/McGyverItaly/3D-OpenTOOLS/assets/71947114/a3cb080a-4da8-466e-a692-60bf34d4086d)
