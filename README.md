@@ -1,20 +1,26 @@
-# 3D-OpenSHuFFle
-3D-OpenSHuFFle is an OpenEuphoria Win32 utility that creates complex OpenSCAD polyhedra (i.e. "polygon mesh", https://en.wikipedia.org/wiki/Polygon_mesh) from a text file
+# 3D-OpenTOOLS v1.6-alpha
+3D-OpenTOOLS is an OpenEuphoria Win32 utility that creates complex OpenSCAD polyhedra (i.e. "polygon mesh", https://en.wikipedia.org/wiki/Polygon_mesh) from a text file
 
 Installation and use:
 
-1a) install Euphoria 3.1.1 Win32+Dos (e31setup.exe file included, or download it from http://www.rapideuphoria.com/v20.htm), put 3D-OpenSHuFFle_11.exw in a directory with Win32lib.ew and utils.e, then double-click on 3D-OpenSHuFFle_11.exw file. The installation takes only 8 MBytes.
+1a) Install Euphoria 3.1.1 Win32+Dos (e31setup.exe file included, or download it from http://www.rapideuphoria.com/v20.htm), then put 3D-OpenTOOLS_16.exw into a directory with Win32lib.ew v0.59.1 (8/June/2003) and utils.e, finally double-click on 3D-OpenTOOLS_16.exw file. The installation takes only 9 MBytes.
 
 Otherwise:
 
-1b) Double-click on 3D-OpenSHuFFle_11.exe (don't need any installation).
+1b) Double-click on 3D-OpenTOOLS_16.exe (don't need any installation).
 
-2) Once opened, click on "input file", then choose a file "*.shuf" to process.
+2) Once opened, click on menu "?", then on the "Read Me First" item.
 
-3) Optionally, you can choose a so-called "rotfile" (can be the same input file of point 2.) pressing the "Rot Input File" button; pressing the "RotFile Off" button, you enable the bending, sections scaling etc. of the resulting "*.scad" object.
+3) Follow the instructions to generate a mesh (cube, cylinder or torus).
 
-4) Press one or more of the big buttons; their functions are described in the Documentation.pdf file.
+4) Save it on disk with the "Save Abs. Main Sequence" Button.
 
-5) Test the resulting file/files under OpenSCAD. If it's already installed, simply double click on it. If you are modifiying the same file more times, OpenSCAD could require the F4+F5 buttons pressing (reload & refresh), depending on the setup. 
+5) Load it with the "Main Input file" button.
 
-The examples airplane, foot_model, special_support, 2T_exhaust_pipe and diablo_game are provided to test the program and to get an idea of the potentiality.
+6) Press "Main+Mod. Sequence to Polyhedron": an OpenSCAD file will now be generated.
+
+5) Check the resulting file(s) in OpenSCAD. If it is already installed, simply double-click on it. If you edit the same file several times, OpenSCAD may require you to press F4+F5 (reload and update), depending on the configuration.
+
+6) Other functions are described in the Documentation.pdf file. In particular, you can start directly from a text file for mesh generation.
+
+Various examples are provided to test the application and get an idea of its potential..
