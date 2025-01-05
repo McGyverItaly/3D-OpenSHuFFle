@@ -1,13 +1,13 @@
-# 3D-OpenTOOLS v1.6-alpha
+# 3D-OpenTOOLS v1.7-beta
 3D-OpenTOOLS is an OpenEuphoria Win32 utility that creates complex OpenSCAD polyhedra (i.e. "polygon mesh", https://en.wikipedia.org/wiki/Polygon_mesh) from a text file
 
 Installation and use:
 
-1a) Install Euphoria 3.1.1 Win32+Dos (e31setup.exe file included, or download it from http://www.rapideuphoria.com/v20.htm), then put 3D-OpenTOOLS_16.exw into a directory with Win32lib.ew v0.59.1 (8/June/2003) and utils.e, finally double-click on 3D-OpenTOOLS_16.exw file. The installation takes only 9 MBytes.
+1a) Install Euphoria 3.1.1 Win32+Dos (e31setup.exe file included, or download it from http://www.rapideuphoria.com/v20.htm), then put 3D-OpenTOOLS_17.exw into a directory with Win32lib.ew v0.59.1 (8/June/2003) and utils.e, finally double-click on 3D-OpenTOOLS_16.exw file. The installation takes only 9 MBytes.
 
 Otherwise:
 
-1b) Double-click on 3D-OpenTOOLS_16.exe (don't need any installation).
+1b) Double-click on 3D-OpenTOOLS_17.exe (don't need any installation).
 
 2) Once opened, click on menu "?", then on the "Read Me First" item.
 
