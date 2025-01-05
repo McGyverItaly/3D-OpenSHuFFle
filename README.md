@@ -25,3 +25,4 @@ Otherwise:
 
 Various examples are provided to test the application and get an idea of its potential..
 
+![GUI4](https://github.com/user-attachments/assets/1988075e-77fb-4674-82d1-127331eb524f)
